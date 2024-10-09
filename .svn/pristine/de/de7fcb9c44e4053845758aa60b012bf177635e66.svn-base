@@ -1,0 +1,7 @@
+package com.briup.day01;
+
+public class Test {
+    public void method1() {
+        System.out.println("组员");
+    }
+}

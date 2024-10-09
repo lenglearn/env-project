@@ -1,0 +1,58 @@
+package com.briup.smart.env;
+
+import com.alibaba.druid.pool.DruidDataSourceFactory;
+
+import javax.sql.DataSource;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
+
+/**
+ * 工具类：封装了JDBC代码
+ */
+public class JDBCUtil {
+    //连接池对象
+    private static DataSource dataSource;
+    static {
+        try {
+            //1.读取类路径下的配置文件druid.properties
+            InputStream in = JDBCUtil.class.getClassLoader().getResourceAsStream("druid.properties");
+            Properties prop = new Properties();
+            prop.load(in);
+            //2.使用工厂类获取连接池对象
+            dataSource = DruidDataSourceFactory.createDataSource(prop);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+    private JDBCUtil(){
+        //不能在程序外部实例化
+    }
+
+    /**
+     * 从数据库连接池中获取连接对象
+     * @return
+     */
+    public static Connection getConnection() throws SQLException {
+        return dataSource.getConnection();
+    }
+
+    /**
+     * 关闭资源
+     */
+    public static void close(ResultSet rs, Statement st,Connection conn) throws SQLException {
+        if(rs != null) rs.close();
+        if(st != null) st.close();
+        if(conn != null) conn.close();
+    }
+    /**
+     * 关闭资源
+     */
+    public static void close(Statement st,Connection conn) throws SQLException {
+       close(null,st,conn);
+    }
+}

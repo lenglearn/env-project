@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--每个模块的实现类和对应的配置信息-->
+<environment>
+    <!--每个模块-->
+    <gather className="com.briup.smart.env.client.GatherImpl">
+        <filename>D:\\jpzl\\env-project\\trunk\\data-file</filename>
+        <backupBak>D:\\jpzl\\env-project\\trunk\\data-file_bak</backupBak>
+        <skipNum>D:\\jpzl\\env-project\\trunk\\num</skipNum>
+    </gather>
+    <client className="com.briup.smart.env.client.ClientImpl">
+        <host>127.0.0.1</host>
+        <port>9999</port>
+    </client>
+    <server className="com.briup.smart.env.server.ServerImpl">
+        <receivePort>9999</receivePort>
+        <shutdownPort>8888</shutdownPort>
+    </server>
+    <dbStore className="com.briup.smart.env.server.DBStoreImpl">
+        <backupBak>D:\\jpzl\\env-project\\trunk\\data-file_bak</backupBak>
+    </dbStore>
+    <backup className="com.briup.smart.env.util.BackupImpl">
+    </backup>
+    <log className="com.briup.smart.env.util.LogImpl">
+    </log>
+</environment>

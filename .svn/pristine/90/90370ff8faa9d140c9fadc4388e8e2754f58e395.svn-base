@@ -1,0 +1,98 @@
+package com.briup.smart.env;
+
+import com.briup.smart.env.entity.Environment;
+import com.briup.smart.env.server.DBStore;
+import com.briup.smart.env.support.ConfigurationAware;
+import com.briup.smart.env.support.PropertiesAware;
+import com.briup.smart.env.util.Backup;
+import com.briup.smart.env.util.Log;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.util.Collection;
+
+public class DBStoreImpl implements DBStore {
+    private Backup backup;
+    private Log log;
+    //配置文件
+    private String backupFile;
+
+    @Override
+    public void saveDB(Collection<Environment> collection) throws Exception {
+        log.info("开始入库");
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            //1.从数据库连接池中获取连接对象（通过工具类获取）
+            conn = JDBCUtil.getConnection();
+            //设置事务手动提交
+            conn.setAutoCommit(false);
+            //定义预编译变量
+            ps = null;
+            int day = 0;//表示当前采集数据的号
+            int date = 0;//表示上一个环境采集日期
+            int count = 1;//表示添加批处理次数
+            //使用备份模块，读取上次失败的数据后，删除备份数据
+            Object o = backup.load(backupFile, Backup.LOAD_REMOVE);
+            if (o != null) {
+                //上一次入库失败的集合对象
+                Collection<Environment> lastEnvs = (Collection<Environment>) o;
+                //将上一次的集合对象添加当前的集合对象中
+                collection.addAll(lastEnvs);
+            }
+            for (Environment env : collection) {
+                //根据每个环境对象获取对应的日期
+                //timeStamp----LocalDateTime---->int  1 2 3 10 11 12
+                day = env.getGatherDate().toLocalDateTime().getDayOfMonth();
+                //当前数据日期与上一个环境对象的采集时间不同时，获取新的预编译对象
+                if (day != date) {
+                    //当数据采集日期发生改变，需要先把上一个日期的数据执行
+                    if (ps != null) {
+                        //空指针，第一条数据比较！=
+                        ps.executeBatch();
+                    }
+                    //当日期发生改变，新建ps对象，原来的ps对象的批处理信息需要进行执行
+                    String sql = "insert into env_detail_" + day + " VALUES(?,?,?,?,?,?,?,?,?,?)";
+                    ps = conn.prepareStatement(sql);
+                    date = day;//重新赋值
+                }
+                //设置每个占位符对应的数值,从每个集合对象中获取
+                ps.setString(1, env.getName());
+                ps.setString(2, env.getSrcId());
+                ps.setString(3, env.getDesId());
+                ps.setString(4, env.getDevId());
+                ps.setString(5, env.getSensorAddress());
+                ps.setInt(6, env.getCount());
+                ps.setString(7, env.getCmd());
+                ps.setFloat(8, env.getData());
+                ps.setInt(9, env.getStatus());
+                ps.setTimestamp(10, env.getGatherDate());
+                //将插入的数据添加到批处理，不会立即执行
+                ps.addBatch();
+                count++;//统计添加批中的条数
+                //如果批处理超过500条 统一先执行一次
+                if (count % 500 == 0) {
+                    ps.executeBatch();
+                }
+
+                //模拟插入的数据异常
+                if (count == 5) {
+                    //throw new RuntimeException("模拟数据库异常");
+                }
+            }
+            //执行批处理(如果都是一天的数据,或者最后一天不足500条数据)
+            ps.executeBatch();
+            //手动提交事务，数据持久化数据库中
+            conn.commit();
+        } catch (Exception ex) {
+            log.info("入库失败");
+            log.debug("入库模块异常：" + ex.getMessage());
+            //使用备份模块：当异常发生，保存失败，需要将集合数据备份起来
+            backup.store(backupFile, collection, Backup.STORE_OVERRIDE);
+        } finally {
+            //通过工具类关闭资源
+            JDBCUtil.close(ps, conn);
+        }
+        log.info("入库成功");
+    }
+}

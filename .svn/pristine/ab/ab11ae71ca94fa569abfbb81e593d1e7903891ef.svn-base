@@ -1,0 +1,94 @@
+package com.briup.smart.env;
+
+import com.briup.smart.env.client.Client;
+import com.briup.smart.env.client.Gather;
+import com.briup.smart.env.server.DBStore;
+import com.briup.smart.env.server.Server;
+import com.briup.smart.env.support.ConfigurationAware;
+import com.briup.smart.env.support.PropertiesAware;
+import com.briup.smart.env.util.Backup;
+import com.briup.smart.env.util.Log;
+import org.dom4j.Document;
+import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+public class ConfigurationImpl implements Configuration {
+    private static Map<String,Object> modulesMap;
+    private static Properties properties;
+
+    static {
+        SAXReader reader = new SAXReader();
+        InputStream is = ConfigurationImpl.class.getClassLoader().getResourceAsStream("config.xml");
+        try {
+            Class<?> aClass = ConfigurationImpl.class;
+            ConfigurationImpl con = (ConfigurationImpl) aClass.newInstance();
+            modulesMap = new HashMap<>();
+            properties = new Properties();
+            Document document = reader.read(is);
+            Element root = document.getRootElement();
+            List<Element> elementList = root.elements();
+            for (Element e:elementList){
+                String name = e.getName();
+                String className = e.attribute("className").getValue();
+                Object obj = Class.forName(className).newInstance();
+                modulesMap.put(name,obj);
+                List<Element> list = e.elements();
+                for (Element ee:list){
+                    String sname = ee.getName();
+                    String value = ee.getStringValue();
+                    properties.put(sname,value);
+                }
+            }
+            modulesMap.forEach((k,v)->{
+                try {
+                    if (v instanceof PropertiesAware){
+                        ((PropertiesAware)v).init(properties);
+                    }
+                    if (v instanceof ConfigurationAware){
+                        ((ConfigurationAware)v).setConfiguration(con);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @Override
+    public Log getLogger() throws Exception {
+        //从集合中拿对象
+        return (Log) modulesMap.get("log");
+    }
+
+    @Override
+    public Server getServer() throws Exception {
+        return (Server) modulesMap.get("server");
+    }
+
+    @Override
+    public Client getClient() throws Exception {
+        return (Client) modulesMap.get("client");
+    }
+
+    @Override
+    public DBStore getDbStore() throws Exception {
+        return (DBStore) modulesMap.get("dbStore");
+    }
+
+    @Override
+    public Gather getGather() throws Exception {
+        return (Gather) modulesMap.get("gather");
+    }
+
+    @Override
+    public Backup getBackup() throws Exception {
+        return (Backup) modulesMap.get("backup");
+    }
+}

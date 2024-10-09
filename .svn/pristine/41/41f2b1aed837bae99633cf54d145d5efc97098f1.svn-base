@@ -1,0 +1,17 @@
+package com.briup.db;
+
+import com.briup.smart.env.ConfigurationImpl;
+import com.briup.smart.env.server.DBStore;
+import org.junit.Test;
+
+import java.util.ArrayList;
+
+public class TestDB {
+    @Test
+    public void method() throws Exception {
+        ConfigurationImpl config = new ConfigurationImpl();
+        DBStore dbStore = config.getDbStore();
+        //插入操作 空集合 没有数据
+        dbStore.saveDB(new ArrayList<>());
+    }
+}

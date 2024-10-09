@@ -1,0 +1,108 @@
+package com.briup.smart.env.server;
+
+import com.briup.smart.env.Configuration;
+import com.briup.smart.env.entity.Environment;
+import com.briup.smart.env.support.ConfigurationAware;
+import com.briup.smart.env.support.PropertiesAware;
+import com.briup.smart.env.util.Log;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class ServerImpl implements Server, ConfigurationAware, PropertiesAware {
+    private Log log;
+    private DBStore dbStore;
+    private int receivePort;//接收服务器端口
+    private int shutdownPort;//关闭服务器端口
+    private ServerSocket serverSocket;
+    private ExecutorService ThreadPool;
+    private boolean flag=true;
+
+
+
+    @Override
+    public void receive() throws Exception {
+        ThreadPool = Executors.newFixedThreadPool(5);
+        serverSocket = new ServerSocket(receivePort);
+        log.info("接收数据服务器开启");
+        while(flag) {
+                //System.out.println("等待客户端连接");
+                log.info("等待客户端连接");
+
+                Socket socket = serverSocket.accept();
+                //System.out.println("有客户端连接成功+" + socket);
+                log.info("有客户端连接成功"+socket);
+                Runnable r=()->{
+                    try {
+                        InputStream is = socket.getInputStream();
+                        ObjectInputStream ois = new ObjectInputStream(is);
+                        Collection<Environment> list = (ArrayList<Environment>)ois.readObject();
+
+
+                        //System.out.println("数据接收成功：" + list.size());
+                        log.info("数据接收成功：" + list.size());
+
+                        dbStore.saveDB(list);
+
+                        ois.close();
+                        socket.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                };
+                ThreadPool.execute(r);
+            }
+
+    }
+    @Override
+    public void shutdown() throws Exception {
+        Runnable r =()->{
+            try {
+                ServerSocket shutdownSocket = new ServerSocket(shutdownPort);
+                //System.out.println("开启关闭服务器");
+                //System.out.println("等待关闭信号");
+                log.info("开启关闭服务器");
+                log.info("等待关闭信号");
+
+                shutdownSocket.accept();
+                //System.out.println("接收到关闭信号");
+                //System.out.println("服务器即将关闭");
+                log.info("接收到关闭信号");
+                log.info("服务器即将关闭");
+
+                serverSocket.close();
+                //System.out.println("服务器关闭");
+                //System.out.println("关闭服务器关闭");
+                log.info("服务器关闭");
+                log.info("关闭服务器关闭");
+                ThreadPool.shutdown();
+                this.flag=false;
+                shutdownSocket.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            };
+        new Thread(r).start();
+    }
+
+    @Override
+    public void setConfiguration(Configuration configuration) throws Exception {
+        this.log=configuration.getLogger();
+        this.dbStore=configuration.getDbStore();
+    }
+
+    @Override
+    public void init(Properties properties) throws Exception {
+        this.receivePort=Integer.valueOf(properties.getProperty("receivePort"));
+        this.shutdownPort=Integer.valueOf(properties.getProperty("shutdownPort"));
+    }
+}

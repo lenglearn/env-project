@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--xml中的注释：描述元素 节点 标签-->
+<!--编写一个根元素（节点 标签）-->
+<environment>
+    <!-- 定义的子标签应该为每个模块   -->
+    <gather className="com.briup.env.gather.impl.GatherImpl">
+        <!--F:\JP培训\资料文件\XM\env-project\trunk\1.采集模块\数据文件\data-file-->
+        <fileName>F:\JP培训\资料文件\XM\env-project\trunk\1.采集模块\数据文件\data-file</fileName>
+        <backupFileData>Backup/backup-data</backupFileData>
+        <backupFileGather>Backup/backup-gather</backupFileGather>
+    </gather>
+    <client className="com.briup.env.gather.impl.ClientImpl">
+        <host>127.0.0.1</host>
+        <port>8888</port>
+    </client>
+    <server className="com.briup.env.gather.impl.ServerImpl">
+        <receivePort>8888</receivePort>
+        <shutDownPort>8889</shutDownPort>
+    </server>
+    <dbStore className="com.briup.env.gather.impl.DBStoreImpl">
+        <backupFileData>Backup/backup-data</backupFileData>
+    </dbStore>
+    <backUp className="com.briup.env.gather.impl.BackupImpl">
+    </backUp>
+    <log className="com.briup.env.gather.impl.LogImpl">
+    </log>
+</environment>

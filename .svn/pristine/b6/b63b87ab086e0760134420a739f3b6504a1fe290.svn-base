@@ -1,0 +1,51 @@
+package com.briup.smart.env;
+
+import com.briup.smart.env.client.Client;
+import com.briup.smart.env.entity.Environment;
+import com.briup.smart.env.support.ConfigurationAware;
+import com.briup.smart.env.support.PropertiesAware;
+import com.briup.smart.env.util.Log;
+
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.Collection;
+import java.util.Properties;
+
+public class ClientImpl implements Client , ConfigurationAware, PropertiesAware {
+    private String host;//"127.0.0.1"
+    private int port;//1234
+    private Log log;
+
+    @Override
+    public void send(Collection<Environment> collection) throws Exception {
+        Socket socket = new Socket(host,port);
+        //System.out.println("客户端1链接成功："+socket);
+        log.info("客户端1链接成功："+socket);
+
+
+        OutputStream os = socket.getOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(os);
+
+        oos.writeObject(collection);
+
+        //System.out.println("发送成功；"+collection.size());
+        log.info("客户端1数据发送成功；"+collection.size());
+
+        oos.flush();
+        os.close();
+        oos.close();
+        socket.close();
+    }
+
+    @Override
+    public void setConfiguration(Configuration configuration) throws Exception {
+        this.log = configuration.getLogger();
+    }
+
+    @Override
+    public void init(Properties properties) throws Exception {
+        this.host = properties.getProperty("host");
+        this.port = Integer.valueOf(properties.getProperty("port"));
+    }
+}
